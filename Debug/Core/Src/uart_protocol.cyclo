@@ -1,0 +1,4 @@
+../Core/Src/uart_protocol.c:3:6:uart_protocol_init	2
+../Core/Src/uart_protocol.c:17:13:parser_reset	1
+../Core/Src/uart_protocol.c:26:6:uart_protocol_process_byte	14
+../Core/Src/uart_protocol.c:94:10:uart_protocol_build_frame	7

@@ -1,0 +1,8 @@
+../Core/Src/arith_encoder.c:5:23:bit_writer_put_bit	5
+../Core/Src/arith_encoder.c:23:23:bit_writer_bit_plus_follow	4
+../Core/Src/arith_encoder.c:40:23:bit_writer_flush	3
+../Core/Src/arith_encoder.c:50:6:arith_init	3
+../Core/Src/arith_encoder.c:64:13:arith_rescale_model	3
+../Core/Src/arith_encoder.c:78:16:arith_start	3
+../Core/Src/arith_encoder.c:88:16:arith_process_byte	12
+../Core/Src/arith_encoder.c:147:16:arith_finish	6
