@@ -60,8 +60,8 @@ all: main-build
 main-build: AritmeticCodeOitoKBytes.elf secondary-outputs
 
 # Tool invocations
-AritmeticCodeOitoKBytes.elf AritmeticCodeOitoKBytes.map: $(OBJS) $(USER_OBJS) /Users/pedrocoutinho/Documents/STM32/AritmeticCodeOitoKBytes/STM32F030R8TX_FLASH.ld makefile objects.list $(OPTIONAL_TOOL_DEPS)
-	arm-none-eabi-gcc -o "AritmeticCodeOitoKBytes.elf" @"objects.list" $(USER_OBJS) $(LIBS) -mcpu=cortex-m0 -T"/Users/pedrocoutinho/Documents/STM32/AritmeticCodeOitoKBytes/STM32F030R8TX_FLASH.ld" --specs=nosys.specs -Wl,-Map="AritmeticCodeOitoKBytes.map" -Wl,--gc-sections -static --specs=nano.specs -mfloat-abi=soft -mthumb -Wl,--start-group -lc -lm -Wl,--end-group
+AritmeticCodeOitoKBytes.elf AritmeticCodeOitoKBytes.map: $(OBJS) $(USER_OBJS) /home/pg/Documents/SEMB/AritmeticCode8kb/STM32F030R8TX_FLASH.ld makefile objects.list $(OPTIONAL_TOOL_DEPS)
+	arm-none-eabi-gcc -o "AritmeticCodeOitoKBytes.elf" @"objects.list" $(USER_OBJS) $(LIBS) -mcpu=cortex-m0 -T"/home/pg/Documents/SEMB/AritmeticCode8kb/STM32F030R8TX_FLASH.ld" --specs=nosys.specs -Wl,-Map="AritmeticCodeOitoKBytes.map" -Wl,--gc-sections -static --specs=nano.specs -mfloat-abi=soft -mthumb -Wl,--start-group -lc -lm -Wl,--end-group
 	@echo 'Finished building target: $@'
 	@echo ' '
 
