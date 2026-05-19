@@ -1,21 +1,18 @@
 /* USER CODE BEGIN Header */
 /**
-  ******************************************************************************
-  * @file           : main.h
-  * @brief          : Header for main.c file.
-  *                   This file contains the common defines of the application.
-  ******************************************************************************
-  * @attention
-  *
-  * Copyright (c) 2026 STMicroelectronics.
-  * All rights reserved.
-  *
-  * This software is licensed under terms that can be found in the LICENSE file
-  * in the root directory of this software component.
-  * If no LICENSE file comes with this software, it is provided AS-IS.
-  *
-  ******************************************************************************
-  */
+ * @file      main.h
+ * @brief     Cabeçalho de Definições Globais e Protótipos de Periféricos do Sistema.
+ * @details   Apresentação Geral: Arquivo gerador e integrador do ecossistema HAL do STM32Cube. Declara manipuladores de exceções globais.
+ * Permissões de Uso: Copyright (c) 2026 STMicroelectronics. Todos os direitos reservados. Uso estrito sob os termos de licença de software embarcado ST.
+ * Como usar: Incluído obrigatoriamente por todos os arquivos de origem C que interagem com registradores de hardware e APIs HAL.
+ * Entrada: N/A.
+ * Saída: N/A.
+ * Contexto: Infraestrutura base para o trabalho da disciplina de SEMB.
+ * Plataforma Alvo: STM32F030R8T6.
+ *
+ * @author    STMicroelectronics, Paulo Vinícius Holanda Gomes, Pedro Lucas Coutinho de Araujo (Extensões)
+ * @date      Maio de 2026
+ */
 /* USER CODE END Header */
 
 /* Define to prevent recursive inclusion -------------------------------------*/
@@ -50,6 +47,11 @@ extern "C" {
 /* USER CODE END EM */
 
 /* Exported functions prototypes ---------------------------------------------*/
+/**
+  * @brief  Esta função é executada em caso de ocorrência de erro fatal nos periféricos HAL.
+  * @details Desabilita interrupções globais e trava a CPU em um loop infinito preventivo.
+  * @retval None
+  */
 void Error_Handler(void);
 
 /* USER CODE BEGIN EFP */

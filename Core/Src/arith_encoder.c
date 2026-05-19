@@ -1,7 +1,27 @@
-#include "arith_encoder.h"
+/**
+ * @file      arith_encoder.c
+ * @brief     Motor Matemático da Codificação Aritmética.
+ * @details   Apresentação Geral: Implementa modelo de precisão inteira (16-bits) adaptativo baseado em frequências de símbolos.
+ * Permissões de Uso: Acadêmico.
+ * Entrada: Bytes nativos (símbolos de 0 a 255).
+ * Saída: Bits fracionários empacotados em bytes através da função de callback (emit).
+ * Contexto: Trabalho de disciplina de Sistemas Embarcados (SEMB).
+ * Plataforma Alvo: STM32F030R8T6.
+ *
+ * @author    Paulo Vinícius Holanda Gomes, Pedro Lucas Coutinho de Araujo
+ * @date      Maio de 2026
+ */
 
+#include "arith_encoder.h"
 #include <string.h>
 
+/**
+ * @brief  Insere um único bit no buffer temporário (byte) do contexto.
+ * @param  ctx Ponteiro para a estrutura de contexto do algoritmo.
+ * @param  bit O valor binário (0 ou 1) a ser empacotado.
+ * @return arith_status_t ARITH_STATUS_OK ou erro repassado do callback.
+ * @note   Globais afetadas: Modifica os campos current_byte e bit_count dentro do ctx. Aciona o callback quando 8 bits são atingidos.
+ */
 static arith_status_t bit_writer_put_bit(arith_ctx_t *ctx, uint8_t bit) {
     arith_status_t status;
     if ((ctx == NULL) || (ctx->emit == NULL)) {
@@ -20,6 +40,13 @@ static arith_status_t bit_writer_put_bit(arith_ctx_t *ctx, uint8_t bit) {
     return ARITH_STATUS_OK;
 }
 
+/**
+ * @brief  Gerencia a emissão do bit de dado mais a propagação dos bits guardados para prevenir underflow.
+ * @param  ctx Ponteiro para o contexto do algoritmo.
+ * @param  bit O bit resultante do deslocamento e renormalização.
+ * @return arith_status_t ARITH_STATUS_OK ou falha durante emissão.
+ * @note   Globais afetadas: Esvazia o contador ctx->follow_bits.
+ */
 static arith_status_t bit_writer_bit_plus_follow(arith_ctx_t *ctx, uint8_t bit) {
     arith_status_t status = bit_writer_put_bit(ctx, bit);
     if (status != ARITH_STATUS_OK) {
@@ -37,6 +64,11 @@ static arith_status_t bit_writer_bit_plus_follow(arith_ctx_t *ctx, uint8_t bit) 
     return ARITH_STATUS_OK;
 }
 
+/**
+ * @brief  Preenche com zeros o restinho (padding) do último byte aberto.
+ * @param  ctx Ponteiro para o contexto do algoritmo.
+ * @return arith_status_t ARITH_STATUS_OK
+ */
 static arith_status_t bit_writer_flush(arith_ctx_t *ctx) {
     while (ctx->bit_count != 0u) {
         arith_status_t status = bit_writer_put_bit(ctx, 0u);
@@ -47,6 +79,11 @@ static arith_status_t bit_writer_flush(arith_ctx_t *ctx) {
     return ARITH_STATUS_OK;
 }
 
+/**
+ * @brief  Inicializa contadores estatísticos e range ao estado original de entropia plena.
+ * @param  ctx Ponteiro para a memória que abrigará o contexto.
+ * @return void
+ */
 void arith_init(arith_ctx_t *ctx) {
     uint16_t i;
     if (ctx == NULL) {
@@ -61,6 +98,11 @@ void arith_init(arith_ctx_t *ctx) {
     ctx->high = ((1u << 16u) - 1u);
 }
 
+/**
+ * @brief  Previne estouro (overflow) numérico cortando os contadores pela metade sem alterar proporções relativas.
+ * @param  ctx Ponteiro para o contexto contendo a tabela de frequências.
+ * @return void
+ */
 static void arith_rescale_model(arith_ctx_t *ctx) {
     uint16_t i;
     uint32_t sum = 0u;
@@ -75,6 +117,11 @@ static void arith_rescale_model(arith_ctx_t *ctx) {
     ctx->total = (uint16_t)sum;
 }
 
+/**
+ * @brief  Inicia formalmente uma sessão do encoder atribuindo funções de callback.
+ * @param  ctx Contexto, emit Função disparada no buffer full, user Variável auxiliar.
+ * @return arith_status_t ARITH_STATUS_OK
+ */
 arith_status_t arith_start(arith_ctx_t *ctx, arith_emit_fn emit, void *user) {
     if ((ctx == NULL) || (emit == NULL)) {
         return ARITH_STATUS_INVALID_ARG;
@@ -85,6 +132,12 @@ arith_status_t arith_start(arith_ctx_t *ctx, arith_emit_fn emit, void *user) {
     return ARITH_STATUS_OK;
 }
 
+/**
+ * @brief  Rotina CORE: Modela as partições estritas de alta e baixa probabilidade com renormalização iterativa.
+ * @param  ctx Ponteiro para contexto.
+ * @param  symbol Byte cru extraído do arquivo via bloco UART.
+ * @return arith_status_t
+ */
 arith_status_t arith_process_byte(arith_ctx_t *ctx, uint8_t symbol) {
     uint16_t i;
     uint32_t cum_low = 0u;
@@ -144,6 +197,11 @@ arith_status_t arith_process_byte(arith_ctx_t *ctx, uint8_t symbol) {
     return ARITH_STATUS_OK;
 }
 
+/**
+ * @brief  Finaliza a fração, emite os bits remanescentes para definir o espaço final e aplica flux.
+ * @param  ctx Ponteiro para o contexto.
+ * @return arith_status_t
+ */
 arith_status_t arith_finish(arith_ctx_t *ctx) {
     arith_status_t status;
     if ((ctx == NULL) || (ctx->emit == NULL)) {
