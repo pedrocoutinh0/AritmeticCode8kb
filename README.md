@@ -3,7 +3,7 @@
 **Autores:** Paulo Vinícius Holanda Gomes, Pedro Lucas Coutinho de Araujo  
 **Data:** Maio de 2026  
 **Contexto:** Trabalho da disciplina de Sistemas Embarcados (SEMB)  
-**Plataforma Alvo:** STM32F030R8T6 / STM32F030F4P6  
+**Plataforma Alvo:** STM32F030R8T6
 
 ## Visão Geral
 Este projeto implementa um codificador aritmético adaptativo em hardware de recursos limitados (STM32). O processamento ocorre em modelo de *streaming* (byte a byte) para contornar a restrição de RAM da placa, utilizando comunicação UART bidirecional com controle de fluxo *Stop-and-Wait*.
