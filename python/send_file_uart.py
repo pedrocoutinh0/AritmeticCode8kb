@@ -1,10 +1,20 @@
 #!/usr/bin/env python3
+## @file       send_file_uart.py
+#  @brief      Controlador e Orquestrador Host (Transmissor PC).
+#  @details    Apresentação: Segmenta o arquivo de entrada em chunks pequenos limitados a 32 bytes 
+#              e envia via porta Serial utilizando algoritmo Stop-And-Wait baseado no aguardo de ACKs da MCU.
+#              Após a injeção iterativa, gera invólucro do contêiner (ACS1) de metadados comprimidos em disco.
+#              Entrada: Arquivo nativo em disco (ex: .txt até 8kb).
+#              Saída: Arquivo Binário assinado com formato "ACS1".
+#              Contexto: Trabalho de disciplina de Sistemas Embarcados (SEMB).
+#  @author     Paulo Vinícius Holanda Gomes, Pedro Lucas Coutinho de Araujo
+#  @date       Maio de 2026
+
 import argparse
 import struct
 import sys
 import time
 from pathlib import Path
-
 import serial
 
 SOF = 0xA5
@@ -32,7 +42,10 @@ ERR_MAP = {
     0x05: "ERR_ENCODER",
 }
 
-
+## @brief Calcula verificação XOR para validade estrutural física da UART.
+#  @param cmd Int de 1-byte do identificador.
+#  @param payload Carga útil para iteração do bitwise XOR.
+#  @return int Checksum de 1 byte restrito a 0xFF.
 def checksum(cmd: int, payload: bytes) -> int:
     length = len(payload)
     value = cmd ^ (length & 0xFF) ^ ((length >> 8) & 0xFF)
@@ -41,11 +54,19 @@ def checksum(cmd: int, payload: bytes) -> int:
     return value & 0xFF
 
 
+## @brief Prepara o frame raw bytes para envio serial (SOF + CMD + LEN + PAYLOAD + CHK).
+#  @param cmd Identificador do comando lógico.
+#  @param payload Dados úteis do pacote (opcional).
+#  @return bytes Pacote estruturado em bytes pronto para a HAL.
 def pack_frame(cmd: int, payload: bytes = b"") -> bytes:
     length = len(payload)
     return bytes([SOF, cmd, length & 0xFF, (length >> 8) & 0xFF]) + payload + bytes([checksum(cmd, payload)])
 
 
+## @brief Função auxiliar para leitura serial estrita aguardando dados da MCU.
+#  @param ser Objeto de conexão Serial instanciado.
+#  @param count Quantidade exata de bytes requerida para bloqueio.
+#  @return bytes Matriz contendo os bytes lidos fisicamente.
 def read_exact(ser: serial.Serial, count: int) -> bytes:
     data = bytearray()
     while len(data) < count:
@@ -56,6 +77,9 @@ def read_exact(ser: serial.Serial, count: int) -> bytes:
     return bytes(data)
 
 
+## @brief Função de parser base HOST-side para receber e validar frames da placa STM32.
+#  @param ser Objeto de conexão Serial ativo.
+#  @return tuple[int, bytes] Tupla contendo o comando extraído e seu respectivo payload.
 def read_frame(ser: serial.Serial) -> tuple[int, bytes]:
     while True:
         sof = ser.read(1)
@@ -75,6 +99,14 @@ def read_frame(ser: serial.Serial) -> tuple[int, bytes]:
     return cmd, payload
 
 
+## @brief Protocolo Stop-And-Wait: Trava a injeção do arquivo base até que a STM32 devolva um ACK.
+#  @note Ao aguardar um ACK, dados precoces de resposta ('CMD_COMPRESSED_DATA') podem interceptar a UART 
+#        se a CPU não der lock. O Script extrai o bytestream sem interromper a rotina.
+#  @param ser Objeto Serial instanciado ativo (pyserial).
+#  @param expected_cmd O comando recém emitido que requer reposta positiva (ex: CMD_DATA).
+#  @param verbose Se debug no terminal (stdio) está ativado.
+#  @param early_compressed Bytearray por referência que acumula bytes descarregados fora de hora pela placa.
+#  @return None (Lança exceções de Runtime em caso de NACK ou Timeout).
 def wait_ack(ser: serial.Serial, expected_cmd: int, verbose: bool, early_compressed: bytearray) -> None:
     while True:
         cmd, payload = read_frame(ser)
@@ -107,6 +139,11 @@ def wait_ack(ser: serial.Serial, expected_cmd: int, verbose: bool, early_compres
         raise RuntimeError(f"Resposta inesperada: cmd=0x{cmd:02X}")
 
 
+## @brief Varre e intercepta restolhos do buffer na porta UART logo após a liberação do fechamento (CMD_END_INPUT).
+#  @param ser Sessão de acesso pyserial.
+#  @param verbose Flag verbosa booleana.
+#  @param initial_data Matriz alimentada da retenção de dados precoce (early output) ocorrida durante a transmissão.
+#  @return bytes Bitstream integral perfeitamente reconstituído originário do pipeline da STM32.
 def receive_compressed(ser: serial.Serial, verbose: bool, initial_data: bytes = b"") -> bytes:
     compressed = bytearray(initial_data)
     reported_total = None
@@ -138,6 +175,8 @@ def receive_compressed(ser: serial.Serial, verbose: bool, initial_data: bytes = 
     return bytes(compressed)
 
 
+## @brief Trata e valida os argumentos da Interface de Linha de Comando (CLI).
+#  @return argparse.Namespace Estrutura com os argumentos passados pelo usuário.
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Envia arquivo para STM32 via UART e recebe comprimido.")
     parser.add_argument("--port", required=True, help="Porta serial (ex: /dev/tty.usbserial-0001)")
@@ -156,6 +195,8 @@ def parse_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
+## @brief Função Entry-Point PC. Inicia loop de leitura e escrita UART, gerencia blocos e empacota Contêiner final.
+#  @return int Código de saída de status do S.O (0 = OK, 2 = Erro).
 def main() -> int:
     args = parse_args()
     input_path = Path(args.input_path)
@@ -167,10 +208,7 @@ def main() -> int:
 
     data = input_path.read_bytes()
     if len(data) > args.max_bytes:
-        print(
-            f"Erro: arquivo possui {len(data)} bytes e excede limite {args.max_bytes}",
-            file=sys.stderr,
-        )
+        print(f"Erro: arquivo possui {len(data)} bytes e excede limite {args.max_bytes}", file=sys.stderr)
         return 2
 
     print(f"[INFO] Entrada: {input_path} ({len(data)} bytes)")

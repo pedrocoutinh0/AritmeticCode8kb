@@ -1,4 +1,15 @@
 #!/usr/bin/env python3
+## @file       restore_file.py
+#  @brief      Validador Lógico do Contêiner ACS1 e Motor de Descompressão Analítico.
+#  @details    Apresentação: Script encarregado de parsear os bytes finais recuperados no disco físico do Host (pós porta UART). 
+#              Emula inversamente as subdivisões fracionárias (range-decoding) resgatando o conteúdo de sua versão "ARITH". 
+#              Também cruza strings avaliando 100% da integridade final caso um --verify ocorra.
+#              Entrada: Arquivo gerado (.bin) do script send_file_uart.py.
+#              Saída: Arquivo extraído e descompactado (restaurado) no disco.
+#              Contexto: Avaliação final de precisão estrita requerida pela disciplina de SEMB.
+#  @author     Paulo Vinícius Holanda Gomes, Pedro Lucas Coutinho de Araujo
+#  @date       Maio de 2026
+
 import argparse
 import struct
 import sys
@@ -11,13 +22,20 @@ SYMBOL_COUNT = 256
 WNC_TOTAL_MAX = (1 << 14) - 1
 
 
+## @brief Analisador binário estruturado. Extrai bytes de um arquivo cru bit por bit (desempacotador lsb->msb).
+#  @details Exerce a lógica inversa de emissão da MCU, entregando as premissas em binário singular para o Decoder Aritmético.
 class BitReader:
+    
+    ## @brief Construtor da classe de leitura e injeção do buffer de bytes.
+    #  @param data Matriz bruta de bytes capturada do disco.
     def __init__(self, data: bytes) -> None:
         self.data = data
         self.pos = 0
         self.cur = 0
         self.nbits = 0
 
+    ## @brief Extrai iterativamente o próximo bit sequencial utilizando shifs bitwise.
+    #  @return int Valor binário individual (0 ou 1).
     def read_bit(self) -> int:
         if self.nbits == 0:
             if self.pos >= len(self.data):
@@ -31,6 +49,9 @@ class BitReader:
         return bit
 
 
+## @brief Função auxiliar para diminuir escalas da tabela de frequências estatística sem perder proporção relativa.
+#  @param freq Lista referenciada com o histograma de frequências mantido em memória.
+#  @return int Novo tamanho total do modelo após corte de underflow (rescale/2).
 def rescale(freq: list[int]) -> int:
     total = 0
     for i, value in enumerate(freq):
@@ -42,6 +63,12 @@ def rescale(freq: list[int]) -> int:
     return total
 
 
+## @brief Descompactador Aritmético Range-Decoding em alta fidelidade.
+#  @details Recupera o intervalo computacional iterando recursivamente sobre limites predeterminados.
+#           Mimetiza a tabela base da matriz estatística criada em arith_encoder.c nativo da STM32.
+#  @param payload A matriz em bytes fracionários processada pela MCU Baremetal.
+#  @param original_len Metadado contendo o limite de caracteres originais da string para evitar garbage-leaks (estouros).
+#  @return bytes Bytearray perfeitamente reconstruído do conteúdo nativo original extraído.
 def decode_adaptive(payload: bytes, original_len: int) -> bytes:
     if original_len == 0:
         return b""
@@ -106,6 +133,9 @@ def decode_adaptive(payload: bytes, original_len: int) -> bytes:
     return bytes(out)
 
 
+## @brief Analisa o cabeçalho gerado pela estrutura de contêiner customizada ACS1.
+#  @param blob A matriz de bytes extraída do disco de armazenamento do Host.
+#  @return tuple[int, int, bytes] Tupla correspondendo a: (Modo, Tamanho da Origem, Payload Extraído).
 def parse_container(blob: bytes) -> tuple[int, int, bytes]:
     if len(blob) < 13:
         raise ValueError("Arquivo muito curto para container")
@@ -120,6 +150,8 @@ def parse_container(blob: bytes) -> tuple[int, int, bytes]:
     return mode, original_len, payload
 
 
+## @brief Função de Entry Point script Validador PC e interface com SO.
+#  @return int Código de Saída de Processo.
 def main() -> int:
     parser = argparse.ArgumentParser(description="Restaura arquivo salvo por send_file_uart.py (container ACS1).")
     parser.add_argument("--in", dest="input_path", required=True, help="Arquivo de entrada (.bin container)")
