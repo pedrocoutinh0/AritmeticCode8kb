@@ -102,6 +102,7 @@ void arith_init(arith_ctx_t *ctx) {
  * @brief  Previne estouro (overflow) numérico cortando os contadores pela metade sem alterar proporções relativas.
  * @param  ctx Ponteiro para o contexto contendo a tabela de frequências.
  * @return void
+ * @note   Globais afetadas: Nenhuma global de módulo; altera `ctx->freq[]` e `ctx->total`.
  */
 static void arith_rescale_model(arith_ctx_t *ctx) {
     uint16_t i;
@@ -121,6 +122,7 @@ static void arith_rescale_model(arith_ctx_t *ctx) {
  * @brief  Inicia formalmente uma sessão do encoder atribuindo funções de callback.
  * @param  ctx Contexto, emit Função disparada no buffer full, user Variável auxiliar.
  * @return arith_status_t ARITH_STATUS_OK
+ * @note   Globais afetadas: Nenhuma global de módulo; altera o conteúdo de `ctx`.
  */
 arith_status_t arith_start(arith_ctx_t *ctx, arith_emit_fn emit, void *user) {
     if ((ctx == NULL) || (emit == NULL)) {
@@ -137,6 +139,7 @@ arith_status_t arith_start(arith_ctx_t *ctx, arith_emit_fn emit, void *user) {
  * @param  ctx Ponteiro para contexto.
  * @param  symbol Byte cru extraído do arquivo via bloco UART.
  * @return arith_status_t
+ * @note   Globais afetadas: Nenhuma global de módulo; altera `ctx->low`, `ctx->high`, `ctx->freq[]`, `ctx->total`, `ctx->follow_bits`, `ctx->current_byte`, `ctx->bit_count`.
  */
 arith_status_t arith_process_byte(arith_ctx_t *ctx, uint8_t symbol) {
     uint16_t i;
@@ -201,6 +204,7 @@ arith_status_t arith_process_byte(arith_ctx_t *ctx, uint8_t symbol) {
  * @brief  Finaliza a fração, emite os bits remanescentes para definir o espaço final e aplica flux.
  * @param  ctx Ponteiro para o contexto.
  * @return arith_status_t
+ * @note   Globais afetadas: Nenhuma global de módulo; consome e ajusta `ctx->follow_bits`, `ctx->current_byte` e `ctx->bit_count`.
  */
 arith_status_t arith_finish(arith_ctx_t *ctx) {
     arith_status_t status;

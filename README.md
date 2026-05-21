@@ -28,3 +28,29 @@ Este projeto implementa um codificador aritmético adaptativo em hardware de rec
   * **Função:** Orquestrador no lado do *Host* (PC). Fatia o arquivo original em blocos (chunks), envia para a MCU controlando o fluxo via `ACK`, acumula o *bitstream* recebido precocemente e encapsula o resultado no formato contêiner `ACS1`.
 * `python/restore_file.py`
   * **Função:** Validador e descompressor *Host-side*. Extrai os metadados do contêiner `ACS1` e executa a operação inversa do codificador, restaurando o arquivo original e validando a integridade *byte a byte*.
+
+## Entrada e Saída da Aplicação
+- **Entrada (MCU):** Frames UART no formato `SOF + CMD + LEN + PAYLOAD + CHECKSUM` com bytes de arquivo bruto.
+- **Saída (MCU):** Frames de controle (`ACK`, `NACK`, `ERROR`) e dados comprimidos (`CMD_COMPRESSED_DATA` + `CMD_END_OUTPUT`).
+- **Tipo de dado de entrada:** fluxo binário (`uint8_t`) enviado em blocos.
+- **Tipo de dado de saída:** fluxo binário comprimido (`uint8_t`) com metadados de tamanho final.
+
+## Como Executar (Help Rápido)
+1. Compilar e gravar o firmware da pasta `Core/` na placa STM32F030R8T6.
+2. Conectar a UART da placa ao host e ajustar baudrate em `115200`.
+3. Executar no host o envio do arquivo por `python/send_file_uart.py`.
+4. Validar a restauração por `python/restore_file.py`.
+
+## Procedimentos de Teste e Validação
+- **Teste funcional básico:** enviar arquivo pequeno conhecido (ex.: texto curto), comprimir e restaurar, comparando byte a byte o original e o restaurado.
+- **Teste de integridade de enlace:** injetar quadro com checksum inválido e verificar retorno `CMD_NACK` com `ERR_BAD_CHECKSUM`.
+- **Teste de máquina de estados:** enviar `CMD_DATA` sem `CMD_START` e validar rejeição com `ERR_BAD_STATE`.
+- **Teste de limite de memória:** declarar tamanho maior que `APP_MAX_INPUT_BYTES` e confirmar `ERR_OVERSIZE`.
+- **Teste de fim de fluxo:** após `CMD_END_INPUT`, conferir emissão de `CMD_END_OUTPUT` com tamanho comprimido consistente.
+
+## Ajustes para Migração de Plataforma
+- **UART e clock:** revisar inicialização em `Core/Src/main.c` (`MX_USART2_UART_Init` e `SystemClock_Config`) conforme o novo MCU.
+- **Pinos físicos:** atualizar mapeamento de GPIO/UART no STM32CubeMX e regenerar arquivos HAL do projeto.
+- **Limites de memória:** ajustar macros em `Core/Inc/config.h` (`APP_MAX_INPUT_BYTES`, tamanhos de payload e timeouts).
+- **Desempenho/robustez:** recalibrar `APP_UART_RX_TIMEOUT_MS` e `APP_UART_TX_TIMEOUT_MS` conforme a nova frequência de clock e qualidade de enlace.
+- **Compatibilidade do protocolo:** manter inalterados `CMD_*`, estrutura de frame e checksum para interoperar com scripts host existentes.

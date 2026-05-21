@@ -19,6 +19,7 @@
  * @brief  Inicializa ou reseta duramente as variáveis e estado principal do parser UART.
  * @param  protocol Ponteiro para estrutura uart_protocol_t alocada pela aplicação.
  * @return void
+ * @note   Globais afetadas: Nenhuma global de módulo; altera a estrutura apontada por `protocol`.
  */
 void uart_protocol_init(uart_protocol_t *protocol) {
     if (protocol == 0) {
@@ -38,6 +39,7 @@ void uart_protocol_init(uart_protocol_t *protocol) {
  * @brief  Reinicia a máquina de estado suavemente após concluir um pacote ou identificar erro.
  * @param  protocol Instância do protocolo.
  * @return void
+ * @note   Globais afetadas: Nenhuma global de módulo; redefine campos internos da estrutura `protocol`.
  */
 static void parser_reset(uart_protocol_t *protocol) {
     protocol->state = UART_PARSE_WAIT_SOF;
@@ -54,6 +56,7 @@ static void parser_reset(uart_protocol_t *protocol) {
  * @param  byte O byte que acaba de emergir na HAL_UART_Receive.
  * @param  out_frame Onde o bloco final estruturado será retornado.
  * @return bool True se o byte finalizou um frame com integridade validada; False se a FSM segue pendente.
+ * @note   Globais afetadas: Nenhuma global de módulo; altera `protocol` e escreve em `out_frame` quando há frame válido.
  */
 bool uart_protocol_process_byte(uart_protocol_t *protocol, uint8_t byte, uart_frame_t *out_frame) {
     if ((protocol == 0) || (out_frame == 0)) {
@@ -131,6 +134,7 @@ bool uart_protocol_process_byte(uart_protocol_t *protocol, uint8_t byte, uart_fr
  * @param  out_buffer Arranjo pré-alocado pela aplicação onde o fluxo linear de bytes será montado.
  * @param  out_capacity Capacidade física máxima de armazenamento do out_buffer (evita estouros).
  * @return uint16_t Total de bytes preenchidos no buffer final para envio físico.
+ * @note   Globais afetadas: Nenhuma global de módulo; escreve somente em `out_buffer`.
  */
 uint16_t uart_protocol_build_frame(uint8_t cmd,
                                    const uint8_t *payload,

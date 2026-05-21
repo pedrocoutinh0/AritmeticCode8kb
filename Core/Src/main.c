@@ -303,6 +303,8 @@ static void app_handle_frame(const uart_frame_t *frame) {
 
 /**
   * @brief  The application entry point. Ponto de entrada principal Baremetal.
+  * @details Inicializa HAL, clock, GPIO, UART e executa o loop de recepção UART + despacho de frames para a FSM da aplicação.
+  * @note   Globais afetadas: `g_protocol`, `g_arith` e toda a sessão controlada por `app_handle_frame`.
   * @retval int
   */
 int main(void)
@@ -332,6 +334,12 @@ int main(void)
   }
 }
 
+/**
+ * @brief  Configura a árvore de clocks do sistema para operar com HSI interno sem PLL.
+ * @details Define SYSCLK, HCLK e PCLK1, aplicando latência de flash compatível.
+ * @return void
+ * @note   Globais afetadas: Nenhuma variável global de aplicação; afeta registradores RCC/FLASH do microcontrolador.
+ */
 void SystemClock_Config(void)
 {
   RCC_OscInitTypeDef RCC_OscInitStruct = {0};
@@ -358,6 +366,12 @@ void SystemClock_Config(void)
   }
 }
 
+/**
+ * @brief  Inicializa a USART2 no modo assíncrono padrão 8N1.
+ * @details Configura baudrate, formato de quadro, direção TX/RX e chama `HAL_UART_Init`.
+ * @return void
+ * @note   Globais afetadas: Atualiza a estrutura global `huart2`.
+ */
 static void MX_USART2_UART_Init(void)
 {
   huart2.Instance = USART2;
@@ -376,11 +390,22 @@ static void MX_USART2_UART_Init(void)
   }
 }
 
+/**
+ * @brief  Habilita o clock do banco GPIO utilizado pela aplicação.
+ * @return void
+ * @note   Globais afetadas: Nenhuma variável global de aplicação; afeta registradores RCC de GPIO.
+ */
 static void MX_GPIO_Init(void)
 {
   __HAL_RCC_GPIOA_CLK_ENABLE();
 }
 
+/**
+ * @brief  Tratador de erro fatal da aplicação.
+ * @details Desabilita interrupções globais e mantém a CPU em loop infinito para evitar comportamento indefinido.
+ * @return void
+ * @note   Globais afetadas: Nenhuma variável global de aplicação.
+ */
 void Error_Handler(void)
 {
   __disable_irq();
